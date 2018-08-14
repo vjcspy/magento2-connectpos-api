@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="xretail" translate="label" sortOrder="10">
+            <label>SMART OSC</label>
+        </tab>
+        <section id="xpos" translate="label" sortOrder="130" showInDefault="1" showInWebsite="1" showInStore="1">
+            <class>separator-top</class>
+            <label>X-POS</label>
+            <tab>xretail</tab>
+            <resource>SM_XRetail::pos_configuration</resource>
+            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>License Configuration</label>
+                <field id="retail_license" translate="label" type="obscure" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>License Key</label>
+                    <comment>
+                        <model>SM\XRetail\Model\Comment</model>
+                    </comment>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+            </group>
+            <group id="advance" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Advance Configuration</label>
+                <field id="php_run_time" translate="label" type="text" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Php Run time</label>
+                </field>
+
+                <field id="sync_realtime" translate="label comment" sortOrder="20" type="select" showInDefault="1" showInWebsite="1" showInStore="0">
+                <label>Sync Realtime</label>
+                <source_model>SM\XRetail\Config\Model\Realtime</source_model>
+            </field>
+            </group>
+        </section>
+    </system>
+</config>

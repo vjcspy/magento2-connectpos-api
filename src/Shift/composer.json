@@ -1,7 +1,8 @@
 {
-	"name": "vjcspy/magento2-connectpos",
-	"description": "Magento2 API for Connect POS",
-	"version": "1.0.8",
+	"name": "sm/module-retail-shift",
+	"description": "N/A",
+	"type": "magento2-module",
+	"version": "0.1.9",
 	"license": [
 		"proprietary"
 	],
@@ -16,7 +17,13 @@
 		"magento/module-ui": ">100.0",
 		"magento/framework": ">100.0"
 	},
-	"psr-0": {
-		"SM\\": "src"
+	"autoload": {
+		"files": [
+			"registration.php"
+		],
+		"psr-4": {
+			"SM\\Shift\\": ""
+		}
 	}
+	
 }

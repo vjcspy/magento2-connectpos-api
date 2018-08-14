@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © 2016 Magento. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <virtualType name="retailLogger" type="Magento\Framework\Logger\Monolog">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="debug" xsi:type="object">SM\XRetail\Logger\Handler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <type name="SM\XRetail\Model\Shell\Process">
+        <arguments>
+            <argument name="logger" xsi:type="object">retailLogger</argument>
+        </arguments>
+    </type>
+</config>

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © 2016 Magento. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- Bootmyshop warehouse integrate-->
+    <type name="BoostMyShop\AdvancedStock\Model\Router">
+        <plugin name="change_router_shipment" type="\SM\Integrate\Warehouse\Plugin\ChangeRouterShipment"/>
+    </type>
+    <type name="BoostMyShop\OrderPreparation\Observer\SalesOrderShipmentSaveAfter">
+        <plugin name="force_order_shipment_process" type="SM\Integrate\Warehouse\Plugin\ForceShipmentProcessing" sortOrder="1" />
+    </type>
+</config>

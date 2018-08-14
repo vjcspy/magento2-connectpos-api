@@ -1,0 +1,28 @@
+<?php
+/**
+ * Copyright © 2016 Magento. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
+// @codingStandardsIgnoreFile
+/**
+ * @var $block \SM\Payment\Block\Info\RetailMultiple
+ */
+?>
+<b><?php echo $block->escapeHtml($block->getMethod()->getTitle()) ?></b>
+<br>
+<br>
+<?php if (count($block->getMultiplePaymentData()) > 0): ?>
+    <?php foreach ($block->getMultiplePaymentData() as $payment) {
+        ?>
+        <div style="margin-left: 15px">
+            <p style="font-weight: 700;font-style: italic"><?php echo $payment['title'];
+                if (isset($payment['data']['ref']))
+                    echo ": Ref#" . $payment['data']['ref'];
+                ?></p>
+            <p><em><?php echo $payment['created_at'] ?></em></p>
+            <p><?php echo $block->formatPrice($payment['amount']) ?></p>
+        </div>
+        <?php
+    } ?>
+<?php endif; ?>

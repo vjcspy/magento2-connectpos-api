@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © 2016 Magento. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Sales:etc/sales.xsd">
+    <section name="quote">
+        <group name="totals">
+            <item name="discount_per_item_before_tax" instance="SM\DiscountPerItem\Model\Quote\Address\Total\DiscountPerItemBeforeTax"
+                  sort_order="390"/>
+            <item name="discount_per_item_after_tax" instance="SM\DiscountPerItem\Model\Quote\Address\Total\DiscountPerItemAfterTax"
+                  sort_order="391"/>
+            <item name="retail_discount_per_item">
+                <renderer name="adminhtml" instance="SM\DiscountPerItem\Block\Adminhtml\Order\Create\Totals\DiscountPerItem"/>
+                <!--<renderer name="frontend" instance="Magento\Tax\Block\Checkout\Subtotal"/>-->
+            </item>
+        </group>
+    </section>
+</config>
