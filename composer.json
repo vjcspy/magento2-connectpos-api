@@ -1,5 +1,5 @@
 {
-	"name": "vjcspy/module-retail",
+	"name": "vjcspy/magento2-connectpos",
 	"description": "Magento2 API for Connect POS",
 	"version": "0.0.1",
 	"license": [
