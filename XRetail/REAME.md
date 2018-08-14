@@ -1,1 +1,0 @@
-# Depends entirely on the available platform. Here is magento 2.
