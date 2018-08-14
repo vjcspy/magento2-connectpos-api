@@ -1,10 +1,7 @@
 {
 	"name": "vjcspy/magento2-connectpos",
 	"description": "Magento2 API for Connect POS",
-	"version": "1.0.8",
-	"license": [
-		"proprietary"
-	],
+	"version": "1.0.9",
 	"require": {
 		"magento/module-backend": ">100.0",
 		"magento/module-config": ">100.0",
@@ -16,7 +13,7 @@
 		"magento/module-ui": ">100.0",
 		"magento/framework": ">100.0"
 	},
-	"psr-0": {
-		"SM\\": "src"
+	"autoload": {
+		"psr-4": {"SM\\": "src/"}
 	}
 }
