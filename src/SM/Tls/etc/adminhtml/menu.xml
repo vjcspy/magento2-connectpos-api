@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="SM_Tls::sales_connectpos" title="Connect POS" translate="title" module="Magento_Sales" sortOrder="10" parent="Magento_Sales::sales" resource="SM_Tls::sales_connectpos" />
+        <add id="SM_Tls::accounting" resource="SM_Tls::accounting" title="Accounting Journal Report" action="smtls/accounting/index" module="SM_Tls" sortOrder="10" parent="SM_Tls::sales_connectpos" dependsOnModule="Magento_Sales"/>
+    </menu>
+</config>

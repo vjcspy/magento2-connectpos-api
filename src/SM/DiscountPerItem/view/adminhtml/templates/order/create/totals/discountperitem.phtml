@@ -1,0 +1,20 @@
+<?php
+/**
+ * @var $block \SM\DiscountPerItem\Block\Adminhtml\Order\Create\Totals\DiscountPerItem
+ */
+?>
+<?php if ($block->displayDiscountPerItem()): ?>
+    <tr class="row-totals">
+        <td style="<?php /* @escapeNotVerified */
+        echo $block->getStyle() ?>" class="admin__total-mark" colspan="<?php /* @escapeNotVerified */
+        echo $block->getColspan(); ?>">
+            <?php /* @escapeNotVerified */
+            echo __('Discount Per Item') ?>
+        </td>
+        <td style="<?php /* @escapeNotVerified */
+        echo $block->getStyle() ?>" class="admin__total-amount">
+            <?php /* @escapeNotVerified */
+            echo $block->formatPrice($block->displayDiscountPerItem()) ?>
+        </td>
+    </tr>
+<?php endif; ?>

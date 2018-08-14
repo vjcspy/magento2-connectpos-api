@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!--
+/**
+    * Copyright © 2016 Magento. All rights reserved.
+    * See COPYING.txt for license details.
+    */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="SM\Performance\Helper\RealtimeManager">
+        <arguments>
+            <argument name="logger" xsi:type="object">retailLogger</argument>
+        </arguments>
+    </type>
+    <type name="SM\Performance\Observer\ModelAfterSave">
+        <arguments>
+            <argument name="cache" xsi:type="object">SM\Performance\Model\Cache\Type\RetailProduct</argument>
+        </arguments>
+    </type>
+    <type name="SM\Performance\Observer\ModelAfterDelete">
+        <arguments>
+            <argument name="cache" xsi:type="object">SM\Performance\Model\Cache\Type\RetailProduct</argument>
+        </arguments>
+    </type>
+    <!--Realtime tax rate/ tax rule -->
+    <type name="Magento\Tax\Model\TaxRuleRepository">
+        <plugin name="realTimeTaxRule" type="SM\Performance\Plugin\RealTimeTax"/>
+    </type>
+    <type name="Magento\Tax\Model\Calculation\RateRepository">
+        <plugin name="realTimeTaxRate" type="SM\Performance\Plugin\RealTimeTax"/>
+    </type>
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="sm_performance_command_sendrealtime" xsi:type="object">SM\Performance\Command\SendRealtime</item>
+                <!--<item name="sm_performance_command_dummysku" xsi:type="object">SM\Performance\Command\DummySku</item>-->
+                <!--<item name="sm_performance_command_testasync" xsi:type="object">SM\Performance\Command\TestAsync</item>-->
+            </argument>
+        </arguments>
+    </type>
+</config>

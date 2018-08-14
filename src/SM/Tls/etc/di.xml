@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../lib/internal/Magento/Framework/ObjectManager/etc/config.xsd">
+    <virtualType name="SmtlsAccountingGridDataProvider" type="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider"/>
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="smtls_accounting_grid_data_source" xsi:type="string">SM\Tls\Model\ResourceModel\Accounting\Grid\Collection</item>
+            </argument>
+        </arguments>
+    </type>
+</config>
