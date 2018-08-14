@@ -1,7 +1,11 @@
 {
 	"name": "vjcspy/magento2-connectpos",
 	"description": "Magento2 API for Connect POS",
-	"version": "1.0.9",
+	"version": "1.0.10",
+	"license": [
+		"OSL-3.0",
+		"AFL-3.0"
+	],
 	"require": {
 		"magento/module-backend": ">100.0",
 		"magento/module-config": ">100.0",
@@ -14,6 +18,30 @@
 		"magento/framework": ">100.0"
 	},
 	"autoload": {
+		"files": [
+			"src/Category/registration.php",
+			"src/Core/registration.php",
+			"src/Customer/registration.php",
+			"src/Customization/registration.php",
+			"src/CustomSale/registration.php",
+			"src/DiscountPerItem/registration.php",
+			"src/DiscountWholeOrder/registration.php",
+			"src/Email/registration.php",
+			"src/Integrate/registration.php",
+			"src/Payment/registration.php",
+			"src/Performance/registration.php",
+			"src/Product/registration.php",
+			"src/Report/registration.php",
+			"src/Sales/registration.php",
+			"src/Setting/registration.php",
+			"src/Shift/registration.php",
+			"src/Shipping/registration.php",
+			"src/Store/registration.php",
+			"src/Tax/registration.php",
+			"src/Tls/registration.php",
+			"src/Wishlist/registration.php",
+			"src/XRetail/registration.php"
+		],
 		"psr-4": {"SM\\": "src/"}
 	}
 }
