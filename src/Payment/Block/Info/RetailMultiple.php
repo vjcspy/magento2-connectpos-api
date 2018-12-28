@@ -94,14 +94,12 @@ class RetailMultiple extends \Magento\Payment\Block\Info {
      */
     protected function _convertAdditionalData() {
         $this->_multiplePayment = json_decode($this->getInfo()->getAdditionalInformation('split_data'), true);
-        if ($this->_multiplePayment) {
-            $this->_multiplePayment = array_filter(
-                $this->_multiplePayment,
-                function ($val) {
-                    return is_array($val);
-                });
-        }
-        
+        $this->_multiplePayment = array_filter(
+            $this->_multiplePayment,
+            function ($val) {
+                return is_array($val);
+            });
+
         return $this;
     }
 
