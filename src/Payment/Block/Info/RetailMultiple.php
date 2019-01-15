@@ -21,12 +21,7 @@ class RetailMultiple extends \Magento\Payment\Block\Info {
      * @var \Magento\Framework\Pricing\PriceCurrencyInterface
      */
     protected $priceCurrency;
-
-    /**
-     * @var \Magento\Sales\Api\OrderRepositoryInterface
-     */
-    protected $orderRepository;
-
+    
     /**
      * RetailMultiple constructor.
      *
@@ -37,11 +32,9 @@ class RetailMultiple extends \Magento\Payment\Block\Info {
     public function __construct(
         \Magento\Framework\View\Element\Template\Context $context,
         \Magento\Framework\Pricing\PriceCurrencyInterface $priceCurrency,
-        \Magento\Sales\Api\OrderRepositoryInterface $orderRepository,
         array $data = []
     ) {
         $this->priceCurrency = $priceCurrency;
-        $this->orderRepository = $orderRepository;
         parent::__construct($context, $data);
     }
 
@@ -86,7 +79,7 @@ class RetailMultiple extends \Magento\Payment\Block\Info {
      * @return float
      */
     public function formatPrice($price) {
-        $order      = $this->orderRepository->get($this->getInfo()->getEntityId());  //load order by order id
+        $order      = $this->getInfo()->getOrder();
         return $this->priceCurrency->format(
             $price,
             $includeContainer = true,
