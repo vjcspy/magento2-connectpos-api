@@ -1,7 +1,7 @@
 {
-  "name": "vjcspy/magento2-connectpos",
+  "name": "sm/module-retail",
   "description": "Magento2 API for Connect POS",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "type": "metapackage",
   "license": [
     "OSL-3.0",
