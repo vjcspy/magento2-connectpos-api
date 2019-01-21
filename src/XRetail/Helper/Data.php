@@ -49,7 +49,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper {
     /**
      * @var string
      */
-    public static $API_VERSION = '0.0.5';
+    public static $API_VERSION = '1.1.0';
 
     /**
      * Data constructor.

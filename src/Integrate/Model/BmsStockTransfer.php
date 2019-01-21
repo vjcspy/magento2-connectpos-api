@@ -226,6 +226,13 @@ class BmsStockTransfer extends ServiceAbstract {
             $collection->addFieldToFilter('st_status', $searchCriteria->getData('status'));
         }
 
+        if ($searchCriteria->getData('type') && $searchCriteria->getData('warehouse_id') && $searchCriteria->getData('type') == 'out') {
+            $collection->addFieldToFilter('st_to', ['neq' => $searchCriteria->getData('warehouse_id')]);
+        }
+        else if ($searchCriteria->getData('type') && $searchCriteria->getData('warehouse_id') && $searchCriteria->getData('type') == 'in') {
+            $collection->addFieldToFilter('st_to', $searchCriteria->getData('warehouse_id'));
+        }
+
         return $collection;
     }
 

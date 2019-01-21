@@ -42,7 +42,7 @@ class FilterCustomSaleProduct {
      * @return mixed
      */
     public function afterGetCollection(\Magento\Catalog\Ui\DataProvider\Product\ProductDataProvider $subject, $result) {
-        if($this->intergrateHelper->isAHWGiftCardxist()){
+        if($this->intergrateHelper->isAHWGiftCardxist() && $this->intergrateHelper->isIntegrateGC()){
             $result->addFieldToFilter('entity_id', ['neq' => $this->intergrateHelper->getGcIntegrateManagement()->getRefundToGCProductId()]);
         }
         return $result->addFieldToFilter('entity_id', ['neq' => $this->customSaleHelper->getCustomSaleId()]);

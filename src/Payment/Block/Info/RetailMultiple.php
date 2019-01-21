@@ -21,7 +21,7 @@ class RetailMultiple extends \Magento\Payment\Block\Info {
      * @var \Magento\Framework\Pricing\PriceCurrencyInterface
      */
     protected $priceCurrency;
-    
+
     /**
      * RetailMultiple constructor.
      *
@@ -77,9 +77,11 @@ class RetailMultiple extends \Magento\Payment\Block\Info {
      * @param $price
      *
      * @return float
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
      */
     public function formatPrice($price) {
-        $order      = $this->getInfo()->getOrder();
+       $order      = $this->getInfo()->getOrder();
         return $this->priceCurrency->format(
             $price,
             $includeContainer = true,

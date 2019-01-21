@@ -95,6 +95,34 @@ class XOrderItem extends \SM\Core\Api\Data\Contract\ApiDataAbstract {
             }
         }
 
+        if (!isset($option['options'])  && isset($productOptions['giftcard_created_codes'])) {
+            $fieldAllow = [
+                'giftcard_amount'          => ['aw_gc_amount', 'Gift Card Amount'],
+                'giftcard_sender_name'     => ['aw_gc_sender_name', 'Gift Card Sender'],
+                'giftcard_recipient_name'  => ['aw_gc_recipient_name', 'Gift Card Recipient'],
+                'giftcard_sender_email'    => ['aw_gc_sender_email', 'Gift Card Sender Email'],
+                'giftcard_recipient_email' => ['aw_gc_recipient_email', 'Gift Card Recipient Email'],
+                'giftcard_message'         => ['aw_gc_message', 'Gift Card Message'],
+                'giftcard_lifetime'        => ['aw_gc_expire', 'Gift Card Expire Date'],
+                'giftcard_created_codes'   => ['aw_gc_created_codes', 'Gift Card Created Code']
+            ];
+            foreach ($fieldAllow as $key => $value) {
+                if ($key === 'giftcard_amount') {
+                    $option['options'][] = [
+                        'key'   => $value[0],
+                        'label' => $value[1],
+                        'value' => $this->getData('price')
+                    ];
+                } else if (isset($productOptions[$key])) {
+                    $option['options'][] = [
+                        'key'   => $value[0],
+                        'label' => $value[1],
+                        'value' => $productOptions[$key],
+                    ];
+                }
+            }
+        }
+
         return $option;
     }
 

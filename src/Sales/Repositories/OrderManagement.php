@@ -13,6 +13,7 @@ use SM\Payment\Model\RetailMultiple;
 use SM\Shipping\Model\Carrier\RetailShipping;
 use SM\XRetail\Repositories\Contract\ServiceAbstract;
 use Magento\Sales\Model\Order;
+
 /**
  * Class OrderManagement
  *
@@ -28,27 +29,39 @@ class OrderManagement extends ServiceAbstract {
 
     const USING_REFUND_TO_GIFT_CARD = 'using_refund_to_GC';
 
-    static $MESSAGE_ERROR         = [];
+    static $MESSAGE_ERROR = [];
 
     const DISCOUNT_WHOLE_ORDER_KEY = 'discount_whole_order';
 
-    const RETAIL_ORDER_PARTIALLY_PAID_SHIPPED     = 13;
-    const RETAIL_ORDER_PARTIALLY_PAID_NOT_SHIPPED = 12;
-    const RETAIL_ORDER_PARTIALLY_PAID             = 11;
+    const RETAIL_ORDER_PARTIALLY_PAID_AWAIT_COLLECTION    = 16;
+    const RETAIL_ORDER_PARTIALLY_PAID_PICKING_IN_PROGRESS = 15;
+    const RETAIL_ORDER_PARTIALLY_PAID_AWAIT_PICKING       = 14;
+    const RETAIL_ORDER_PARTIALLY_PAID_SHIPPED             = 13;
+    const RETAIL_ORDER_PARTIALLY_PAID_NOT_SHIPPED         = 12;
+    const RETAIL_ORDER_PARTIALLY_PAID                     = 11;
 
-    const RETAIL_ORDER_COMPLETE_SHIPPED     = 23;
-    const RETAIL_ORDER_COMPLETE_NOT_SHIPPED = 22;
-    const RETAIL_ORDER_COMPLETE             = 21;
+    const RETAIL_ORDER_COMPLETE_AWAIT_COLLECTION    = 26;
+    const RETAIL_ORDER_COMPLETE_PICKING_IN_PROGRESS = 25;
+    const RETAIL_ORDER_COMPLETE_AWAIT_PICKING       = 24;
+    const RETAIL_ORDER_COMPLETE_SHIPPED             = 23;
+    const RETAIL_ORDER_COMPLETE_NOT_SHIPPED         = 22;
+    const RETAIL_ORDER_COMPLETE                     = 21;
 
-    const RETAIL_ORDER_PARTIALLY_REFUND_SHIPPED     = 33;
-    const RETAIL_ORDER_PARTIALLY_REFUND_NOT_SHIPPED = 32;
-    const RETAIL_ORDER_PARTIALLY_REFUND             = 31;
+    const RETAIL_ORDER_PARTIALLY_REFUND_AWAIT_COLLECTION    = 36;
+    const RETAIL_ORDER_PARTIALLY_REFUND_PICKING_IN_PROGRESS = 35;
+    const RETAIL_ORDER_PARTIALLY_REFUND_AWAIT_PICKING       = 34;
+    const RETAIL_ORDER_PARTIALLY_REFUND_SHIPPED             = 33;
+    const RETAIL_ORDER_PARTIALLY_REFUND_NOT_SHIPPED         = 32;
+    const RETAIL_ORDER_PARTIALLY_REFUND                     = 31;
 
     const RETAIL_ORDER_FULLY_REFUND = 40;
 
-    const RETAIL_ORDER_EXCHANGE_SHIPPED     = 53;
-    const RETAIL_ORDER_EXCHANGE_NOT_SHIPPED = 52;
-    const RETAIL_ORDER_EXCHANGE             = 51;
+    const RETAIL_ORDER_EXCHANGE_AWAIT_COLLECTION    = 56;
+    const RETAIL_ORDER_EXCHANGE_PICKING_IN_PROGRESS = 55;
+    const RETAIL_ORDER_EXCHANGE_AWAIT_PICKING       = 54;
+    const RETAIL_ORDER_EXCHANGE_SHIPPED             = 53;
+    const RETAIL_ORDER_EXCHANGE_NOT_SHIPPED         = 52;
+    const RETAIL_ORDER_EXCHANGE                     = 51;
 
     /**
      * @var \Magento\Backend\App\Action\Context
@@ -212,8 +225,8 @@ class OrderManagement extends ServiceAbstract {
         $this->orderFactory             = $orderFactory;
 
         $this->resourceConnection = $resourceConnection;
-        $this->metadataPool = $metadataPool;
-        $this->paymentHelper            = $paymentHelper;
+        $this->metadataPool       = $metadataPool;
+        $this->paymentHelper      = $paymentHelper;
         parent::__construct($context->getRequest(), $dataConfig, $storeManager);
     }
 
@@ -234,7 +247,8 @@ class OrderManagement extends ServiceAbstract {
              ->checkIntegrateWh();
 
         if ($isSaveOrder === true) {
-            $this->checkOrderCount();
+            $this->checkOrderCount()
+                 ->checkXRefNumCardKnox();
         }
 
         try {
@@ -272,6 +286,7 @@ class OrderManagement extends ServiceAbstract {
 
         if ($dataOrder->getId()) {
             $dataOrder->setData('retail_note', $data['retail_note']);
+            $this->saveNoteToOrderAlso($dataOrder, $data['retail_note']);
             $dataOrder->save();
 
             $criteria = new DataObject(['entity_id' => $dataOrder->getEntityId(), 'storeId' => $dataOrder->getStoreId()]);
@@ -287,13 +302,12 @@ class OrderManagement extends ServiceAbstract {
     public function saveOrder() {
         self::$SAVE_ORDER = true;
         $this->loadOrderData(true);
-        $messError = [];
         try {
             $order = $this->_getOrderCreateModel()
                           ->setIsValidate(true)
                           ->createOrder();
             $this->savePaymentTransaction($order);
-
+            $this->saveNoteToOrderAlso($order);
         }
         catch (\Exception $e) {
             if (isset($order) && !!$order->getId()) {
@@ -315,7 +329,9 @@ class OrderManagement extends ServiceAbstract {
                     }
                     catch (\Exception $e) {
 // ship error
-                        if ($e->getMessage() === 'Negative quantity is not allowed, stock movement can not be created' || $e->getMessage() === 'Negative quantity is not allowed') {
+                        if ($e->getMessage() === 'Negative quantity is not allowed, stock movement can not be created'
+                            || $e->getMessage()
+                               === 'Negative quantity is not allowed') {
                             self::$MESSAGE_ERROR[] = 'can_not_create_shipment_with_negative_qty';
                         }
                     }
@@ -332,25 +348,33 @@ class OrderManagement extends ServiceAbstract {
             }
         }
 
-        if($this->_isRefundToGC && !!$this->getRequest()->getParam('order_refund_id')){
+        if ($this->_isRefundToGC && !!$this->getRequest()->getParam('order_refund_id')) {
             /** @var \Magento\Sales\Model\Order $order */
             $refundOrder = $this->orderFactory->create();
             $refundOrder->load($this->getRequest()->getParam('order_refund_id'));
             if ($refundOrder->getId()) {
                 $splitData = json_decode($refundOrder->getPayment()->getAdditionalInformation('split_data'), true);
-                foreach ($splitData as &$paymentData) {
-                    if (is_array($paymentData) && $paymentData['type'] == 'refund_gift_card' && $paymentData['is_purchase'] == 0) {
-                        $gcProduct                       = $order->getItemsCollection()->getFirstItem();
-                        $paymentData['gc_created_codes'] = $gcProduct->getData('product_options')['aw_gc_created_codes'][0];
-                        $paymentData['gc_amount']        = $gcProduct->getData('product_options')['aw_gc_amount'];
+                if($splitData) {
+                    foreach ($splitData as &$paymentData) {
+                        if (is_array($paymentData) && $paymentData['type'] == 'refund_gift_card' && $paymentData['is_purchase'] == 0) {
+                            $gcProduct = $order->getItemsCollection()->getFirstItem();
+                            if ($this->integrateHelperData->isAHWGiftCardxist() && $this->integrateHelperData->isIntegrateGC()) {
+                                $paymentData['gc_created_codes'] = $gcProduct->getData('product_options')['aw_gc_created_codes'][0];
+                                $paymentData['gc_amount']        = $gcProduct->getData('product_options')['aw_gc_amount'];
+                            }
+                            else if ($this->integrateHelperData->isGiftCardMagento2EE() && $this->integrateHelperData->isIntegrateGC()) {
+                                $paymentData['gc_created_codes'] = $gcProduct->getData('product_options')['giftcard_created_codes'][0];
+                                $paymentData['gc_amount']        = $paymentData['amount'];
+                            }
+                        }
                     }
+                    $refundOrder->getPayment()->setAdditionalInformation('split_data', json_encode($splitData))->save();
                 }
-                $refundOrder->getPayment()->setAdditionalInformation('split_data', json_encode($splitData))->save();
             }
             $criteria = new DataObject(
 
                 [
-                    'entity_id' => $order->getEntityId().",". $refundOrder->getEntityId(),
+                    'entity_id' => $order->getEntityId() . "," . $refundOrder->getEntityId(),
                     'storeId'   => $this->_requestOrderData['store_id'],
                     'outletId'  => $this->_requestOrderData['outlet_id']]);
 
@@ -456,7 +480,9 @@ class OrderManagement extends ServiceAbstract {
     }
 
     /**
+     * @param $orderData
      *
+     * @throws \Exception
      */
     protected function savePaymentTransaction($orderData) {
         $data  = $this->getRequest()->getParams();
@@ -496,8 +522,8 @@ class OrderManagement extends ServiceAbstract {
      * save total tax into shift table when create order
      */
     protected function saveOrderTaxInTableShift($orderData) {
-        $orderID = $orderData->getId();
-        $state = $this->orderFactory->create()->load($orderID)->getData()['state'];
+        $orderID        = $orderData->getId();
+        $state          = $this->orderFactory->create()->load($orderID)->getData()['state'];
         $taxClassAmount = [];
         if ($orderData instanceof Order) {
             $taxClassAmount = $this->_taxHelper->getCalculatedTaxes($orderData);
@@ -516,22 +542,23 @@ class OrderManagement extends ServiceAbstract {
         $currentBaseTax = floatval($openingShift->getData('base_total_order_tax')) + floatval($base_tax_amount);
         $currentTaxData = json_decode($openingShift->getData('detail_tax'), true);
 
-        $currentPoint_spent = floatval($openingShift->getData('point_spent'));
+        $currentPoint_spent  = floatval($openingShift->getData('point_spent'));
         $currentPoint_earned = floatval($openingShift->getData('point_earned'));
         if ($this->integrateHelperData->isAHWRewardPoints() && $this->integrateHelperData->isIntegrateRP() && $state === 'complete') {
-            $connection = $this->resourceConnection->getConnectionByName(
+            $connection            = $this->resourceConnection->getConnectionByName(
                 $this->metadataPool->getMetadata('Aheadworks\RewardPoints\Api\Data\TransactionInterface')->getEntityConnectionName()
             );
             $select_transaction_id = $connection->select()
-                ->from($this->resourceConnection->getTableName('aw_rp_transaction_entity'))
-                ->where('entity_id ='.$orderData->getId());
+                                                ->from($this->resourceConnection->getTableName('aw_rp_transaction_entity'))
+                                                ->where('entity_id =' . $orderData->getId());
 
-            $transaction_id = $connection->fetchOne($select_transaction_id,['transaction_id']);
+            $transaction_id = $connection->fetchOne($select_transaction_id, ['transaction_id']);
 
             $balance = $this->rpIntegrateManagement->getTransactionByOrder($transaction_id);
-            if($balance > 0){
+            if ($balance > 0) {
                 $currentPoint_earned += floatval($balance ? $balance : 0);
-            }else{
+            }
+            else {
                 $currentPoint_spent += floatval($balance ? $balance : 0);
             }
 
@@ -551,8 +578,8 @@ class OrderManagement extends ServiceAbstract {
         $openingShift->setData('total_order_tax', "$currentTax")
                      ->setData('base_total_order_tax', "$currentBaseTax")
                      ->setData('detail_tax', json_encode($currentTaxData))
-                     ->setData('point_earned',$currentPoint_earned)
-                     ->setData('point_spent',$currentPoint_spent)
+                     ->setData('point_earned', $currentPoint_earned)
+                     ->setData('point_spent', $currentPoint_spent)
                      ->save();
 
     }
@@ -941,6 +968,32 @@ class OrderManagement extends ServiceAbstract {
     private function transformData() {
         $this->_requestOrderData = $data = $this->getRequest()->getParams();
         $order                   = $this->getRequest()->getParam('order');
+        $items                   = $this->getRequest()->getParam('items');
+
+        if (is_array($items)) {
+            foreach ($items as $key => $value) {
+                if (isset($value['gift_card'])) {
+                    if (isset($items[$key]['gift_card']['aw_gc_amount']))
+                        $items[$key]['gift_card']['giftcard_amount'] = $items[$key]['gift_card']['aw_gc_amount'];
+                    if (isset($items[$key]['gift_card']['aw_gc_custom_amount']))
+                        $items[$key]['gift_card']['custom_giftcard_amount'] = $items[$key]['gift_card']['aw_gc_custom_amount'];
+                    if (isset($items[$key]['gift_card']['aw_gc_sender_name']))
+                        $items[$key]['gift_card']['giftcard_sender_name'] = $items[$key]['gift_card']['aw_gc_sender_name'];
+                    if (isset($items[$key]['gift_card']['aw_gc_sender_email']))
+                        $items[$key]['gift_card']['giftcard_sender_email'] = $items[$key]['gift_card']['aw_gc_sender_email'];
+                    if (isset($items[$key]['gift_card']['aw_gc_recipient_name']))
+                        $items[$key]['gift_card']['giftcard_recipient_name'] = $items[$key]['gift_card']['aw_gc_recipient_name'];
+                    if (isset($items[$key]['gift_card']['aw_gc_recipient_email']))
+                        $items[$key]['gift_card']['giftcard_recipient_email'] = $items[$key]['gift_card']['aw_gc_recipient_email'];
+                    if (isset($items[$key]['gift_card']['aw_gc_headline']))
+                        $items[$key]['gift_card']['giftcard_headline'] = $items[$key]['gift_card']['aw_gc_headline'];
+                    if (isset($items[$key]['gift_card']['aw_gc_message']))
+                        $items[$key]['gift_card']['giftcard_message'] = $items[$key]['gift_card']['aw_gc_message'];
+                }
+            }
+            $data['items'] = $items;
+        }
+
         if (isset($order['billing_address']['first_name']))
             $order['billing_address']['firstname'] = $order['billing_address']['first_name'];
         if (isset($order['billing_address']['middle_name']))
@@ -967,11 +1020,13 @@ class OrderManagement extends ServiceAbstract {
 
         if ($this->checkIsRefundToGiftCard()) {
             $refundToGCProductId = $this->gcIntegrateManagement->getRefundToGCProductId();
-            $giftCardItems = [
+            $giftCardItems       = [
                 'qty'        => 1,
                 'product_id' => $refundToGCProductId,
                 'product'    => null,
-                'gift_card'  => [
+            ];
+            if ($this->integrateHelperData->isAHWGiftCardxist() && $this->integrateHelperData->isIntegrateGC()) {
+                $giftCardItems['gift_card'] = [
                     'aw_gc_amount'        => "custom",
                     'aw_gc_custom_amount' => $order['payment_data'][0]['refund_amount'] - $data['order']['payment_data'][0]['amount'],
                     'aw_gc_template'      => 'aw_giftcard_email_template',
@@ -980,8 +1035,19 @@ class OrderManagement extends ServiceAbstract {
 
                     'aw_gc_recipient_email' => $order['payment_data'][0]['recipient_email'],
                     'aw_gc_recipient_name'  => $order['payment_data'][0]['recipient_name']
-                ]
-            ];
+                ];
+            }
+            else if ($this->integrateHelperData->isGiftCardMagento2EE() && $this->integrateHelperData->isIntegrateGC()) {
+                $giftCardItems['gift_card'] = [
+                    'giftcard_amount'        => "custom",
+                    'custom_giftcard_amount' => $order['payment_data'][0]['refund_amount'] - $data['order']['payment_data'][0]['amount'],
+                    'giftcard_sender_email'  => $order['payment_data'][0]['sender_email'],
+                    'giftcard_sender_name'   => $order['payment_data'][0]['sender_name'],
+
+                    'giftcard_recipient_email' => $order['payment_data'][0]['recipient_email'],
+                    'giftcard_recipient_name'  => $order['payment_data'][0]['recipient_name']
+                ];
+            }
             array_push($data['items'], $giftCardItems);
 
             $data['order']['payment_data'][0]['isChanging'] = true;
@@ -989,7 +1055,8 @@ class OrderManagement extends ServiceAbstract {
                 $data['order']['payment_data'][0]['amount'] = $data['order']['payment_data'][0]['refund_amount'];
             }
             $this->registry->register(self::USING_REFUND_TO_GIFT_CARD, true);
-        }else{
+        }
+        else {
             $this->registry->register(self::USING_REFUND_TO_GIFT_CARD, false);
         }
 
@@ -1269,6 +1336,21 @@ class OrderManagement extends ServiceAbstract {
      * @return $this
      * @throws \Exception
      */
+    protected function checkXRefNumCardKnox() {
+        // need reference number CardKnox for report
+        $xRefNum = $this->getRequest()->getParam('xRefNum');
+        if (!!$xRefNum) {
+            $this->registry->unregister('xRefNum');
+            $this->registry->register('xRefNum', $xRefNum);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     * @throws \Exception
+     */
     protected function checkOrderCount() {
         $orderCount = $this->getRequest()->getParam('retail_id');
         if (!!$orderCount) {
@@ -1286,7 +1368,7 @@ class OrderManagement extends ServiceAbstract {
             }
             if (!!$sellerIds) {
                 $this->registry->unregister('sm_seller_ids');
-                $this->registry->register('sm_seller_ids', implode(",",$sellerIds));
+                $this->registry->register('sm_seller_ids', implode(",", $sellerIds));
             }
 
             /** @var \SM\XRetail\Model\UserOrderCounter $userOrderCounterModel */
@@ -1344,6 +1426,7 @@ class OrderManagement extends ServiceAbstract {
                 'gift_card')) {
             return true;
         }
+
         return false;
     }
 
@@ -1366,13 +1449,26 @@ class OrderManagement extends ServiceAbstract {
             }
         }
 
-        if ($this->integrateHelperData->isIntegrateGC() && isset($order['is_exchange']) && $order['is_exchange'] == true && $isRefundByGC && is_array($data['items']) && count($data['items']) == 0) {
+        if ($this->integrateHelperData->isIntegrateGC() && isset($order['is_exchange']) && $order['is_exchange'] == true && $isRefundByGC
+            && is_array(
+                $data['items'])
+            && count($data['items']) == 0) {
             $this->_isRefundToGC = true;
-        }else {
+        }
+        else {
             $this->_isRefundToGC = false;
         }
 
         return $this->_isRefundToGC;
     }
 
+    protected function saveNoteToOrderAlso($order, $comment = null) {
+        if ($comment != null || $comment = $this->getRequest()->getParam("retail_note")) {
+            /** @var \SM\Sales\Model\AdminOrder\Create $order */
+            $order->addStatusHistoryComment($comment)
+                  ->setIsCustomerNotified(false)
+                  ->setEntityName('order')
+                  ->save();
+        }
+    }
 }

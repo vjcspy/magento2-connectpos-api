@@ -54,13 +54,36 @@ class UpgradeSchema implements UpgradeSchemaInterface {
             $this->addNewColumnCustomDateTimeReceipt($setup);
             $this->updateDefaultDateTimeReceipt($setup);
         }
+        if (version_compare($context->getVersion(), '0.2.6', '<')) {
+            $this->addMapInfoOutlet($setup);
+        }
+        if (version_compare($context->getVersion(), '0.3.0', '<')) {
+            $this->addCategoryOutletTable($setup);
+        }
     }
 
     /**
      * @param \Magento\Framework\Setup\SchemaSetupInterface   $setup
      * @param \Magento\Framework\Setup\ModuleContextInterface $context
-     *
-     * @throws \Zend_Db_Exception
+     */
+    protected function addCategoryOutletTable(SchemaSetupInterface $setup) {
+        $installer = $setup;
+        $installer->startSetup();
+        $installer->getConnection()->dropColumn($installer->getTable('sm_xretail_outlet'), 'category_id');
+        $installer->getConnection()->addColumn(
+            $installer->getTable('sm_xretail_outlet'),
+            'category_id',
+            [
+                'type'    => \Magento\Framework\DB\Ddl\Table::TYPE_INTEGER,
+                'comment' => 'category id',
+            ]
+        );
+
+        $installer->endSetup();
+    }
+    /**
+     * @param \Magento\Framework\Setup\SchemaSetupInterface   $setup
+     * @param \Magento\Framework\Setup\ModuleContextInterface $context
      */
     protected function addOutletTable(SchemaSetupInterface $setup, ModuleContextInterface $context) {
         $installer = $setup;
@@ -571,25 +594,25 @@ class UpgradeSchema implements UpgradeSchemaInterface {
             ],
             [
                 [
-                    "customer_info"       => "1",
-                    "order_info"          => json_encode(
+                    "customer_info"      => "1",
+                    "order_info"         => json_encode(
                         [
                             "shipping_address"  => true,
                             "sales_person"      => true,
                             "discount_shipment" => true
                         ],
                         true),
-                    "row_total_incl_tax"  => true,
-                    "logo_image_status"   => true,
-                    "footer_image_status" => true,
-                    "subtotal_incl_tax"   => true,
-                    "header"              => "<h2>X-POS</h2>",
-                    "footer"              => "Thank you for shopping!",
-                    "enable_barcode"      => true,
-                    "barcode_symbology"   => "CODE128",
-                    "enable_power_text"   => true,
-                    "name"                => "X-Retail default receipt",
-                    "is_default"          => true,
+                    "row_total_incl_tax" => true,
+                    "logo_image_status" => true,
+                    "footer_image_status" =>true,
+                    "subtotal_incl_tax"  => true,
+                    "header"             => "<h2>X-POS</h2>",
+                    "footer"             => "Thank you for shopping!",
+                    "enable_barcode"     => true,
+                    "barcode_symbology"  => "CODE128",
+                    "enable_power_text"  => true,
+                    "name"               => "X-Retail default receipt",
+                    "is_default"         => true,
                 ]
             ]
         );
@@ -604,7 +627,7 @@ class UpgradeSchema implements UpgradeSchemaInterface {
             'header',
             'header',
             [
-                'type'   => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
+                'type' => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
                 'length' => 255000,
                 ['nullable' => false,],
                 'Header'
@@ -621,10 +644,10 @@ class UpgradeSchema implements UpgradeSchemaInterface {
             $installer->getTable('sm_xretail_outlet'),
             'place_id',
             [
-                'type'     => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
-                'length'   => 25500,
+                'type' => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
+                'length' => 25500,
                 'nullable' => false,
-                'comment'  => 'Place ID Google Map'
+                'comment' => 'Place ID Google Map'
             ]
         );
 
@@ -632,10 +655,10 @@ class UpgradeSchema implements UpgradeSchemaInterface {
             $installer->getTable('sm_xretail_outlet'),
             'url',
             [
-                'type'     => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
-                'length'   => 25500,
+                'type' => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
+                'length' => 25500,
                 'nullable' => false,
-                'comment'  => 'URL Google Map'
+                'comment' => 'URL Google Map'
             ]
         );
 
@@ -717,5 +740,43 @@ class UpgradeSchema implements UpgradeSchemaInterface {
             ],
             ['day_of_week = ?' => null]
         );
+    }
+
+    protected function addMapInfoOutlet(SchemaSetupInterface $setup) {
+        $installer = $setup;
+
+        $installer->getConnection()->addColumn(
+            $installer->getTable('sm_xretail_outlet'),
+            'lat',
+            [
+                'type' => \Magento\Framework\DB\Ddl\Table::TYPE_FLOAT,
+                'nullable' => false,
+                'comment' => 'Latitude Google Map'
+            ]
+        );
+
+        $installer->getConnection()->addColumn(
+            $installer->getTable('sm_xretail_outlet'),
+            'lng',
+            [
+                'type' => \Magento\Framework\DB\Ddl\Table::TYPE_FLOAT,
+                'nullable' => false,
+                'comment' => 'Longitude Google Map'
+            ]
+        );
+
+        $installer->getConnection()->addColumn(
+            $installer->getTable('sm_xretail_outlet'),
+            'allow_click_and_collect',
+            [
+                'type' =>  \Magento\Framework\DB\Ddl\Table::TYPE_SMALLINT,
+                'length' => 1,
+                'nullable' => false,
+                'default' => '1',
+                'comment' => 'Allow click and collect'
+            ]
+        );
+
+        $setup->endSetup();
     }
 }

@@ -318,12 +318,6 @@ class AheadWorks121 extends AbstractGCIntegrate implements GCIntegrateInterface 
 
         $id = $eavAttributeSetCollection->getFirstItem()->getId();
 
-        if (is_null($id)) {
-            $eavAttributeSetCollection = $this->entityAttrSet->getCollection();
-
-            return $eavAttributeSetCollection->addFieldToFilter('entity_type_id', $productEntityTypeId)->getFirstItem()->getId();
-        }
-
         return $id;
     }
 
@@ -346,11 +340,11 @@ class AheadWorks121 extends AbstractGCIntegrate implements GCIntegrateInterface 
     public function updateRefundToGCProduct($data) {
         $productModel = $this->objectManager->create('Magento\Catalog\Model\Product')->load($this->getRefundToGCProductId());
 
-        if ($data['is_default_codepool_pattern'] != true && !!$data['code_pool']) {
-            $productModel->setData(ProductAttributeInterface::CODE_AW_GC_POOL, $data['code_pool']);
+        if ($data['is_default_codepool_pattern'] != true && !!$data['code_pool'] && class_exists('\Aheadworks\Giftcard\Api\Data\ProductAttributeInterface')) {
+            $productModel->setData(\Aheadworks\Giftcard\Api\Data\ProductAttributeInterface::CODE_AW_GC_POOL, $data['code_pool']);
         }
         else {
-            $productModel->unsetData(ProductAttributeInterface::CODE_AW_GC_POOL);
+            $productModel->unsetData(\Aheadworks\Giftcard\Api\Data\ProductAttributeInterface::CODE_AW_GC_POOL);
         }
         $productModel->save();
     }

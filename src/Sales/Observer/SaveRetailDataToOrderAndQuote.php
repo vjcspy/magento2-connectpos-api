@@ -94,5 +94,11 @@ class SaveRetailDataToOrderAndQuote implements ObserverInterface {
             $quote->setData('is_exchange', $retailExchange);
             $order->setData('is_exchange', $retailExchange);
         }
+
+        $xRefNum = $this->registry->registry('xRefNum');
+        if (!!$xRefNum) {
+            $quote->setData('xRefNum', $xRefNum);
+            $order->setData('xRefNum', $xRefNum);
+        }
     }
 }

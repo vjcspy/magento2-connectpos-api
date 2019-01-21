@@ -200,10 +200,11 @@ class DashboardManagement extends ServiceAbstract {
             ];
         }
 
-        $symbolBaseCurrency = $this->storeManager->getStore()->getBaseCurrency()->getSymbol();
-        $objectManager      = \Magento\Framework\App\ObjectManager::getInstance();
-        $currency           = $objectManager->create('Magento\Directory\Model\CurrencyFactory')->create()->load($symbolBaseCurrency);
+        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        $store = $this->storeManager->getStore();
+        $currency           = $objectManager->create('Magento\Directory\Model\CurrencyFactory')->create()->load($store->getBaseCurrencyCode());
         $listScopeChart['current_currency']     = $currency->getCurrencySymbol();
+
         return $listScopeChart;
     }
 

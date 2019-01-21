@@ -32,7 +32,7 @@ class UpgradeSchema implements UpgradeSchemaInterface {
         if (version_compare($context->getVersion(), '1.0.3', '<')) {
             $this->updateShiftTable($setup, $context);
         }
-        if(version_compare($context->getVersion(), '1.1.0', '<')){
+        if(version_compare($context->getVersion(), '1.1.1', '<')){
             $this->fixReportVersion($setup,$context);
         }
     }

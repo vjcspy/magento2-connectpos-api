@@ -25,7 +25,7 @@ use SM\Performance\Helper\CacheKeeper;
 class Sender {
     static $CLOUD_URL = "http://cloud.connectpos.com";
     //static $CLOUD_URL = "http://cloud.local:2005";
-    //static $CLOUD_URL = "http://account.xcloud.smartosc.com:2005";
+    //static $CLOUD_URL = "http://accounts.product.smartosc.com:2005";
 
     protected static $instance;
 

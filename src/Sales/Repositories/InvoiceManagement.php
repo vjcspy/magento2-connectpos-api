@@ -52,7 +52,10 @@ class InvoiceManagement extends ServiceAbstract {
      * @var \SM\Shift\Model\RetailTransactionFactory
      */
     protected $retailTransactionFactory;
-    private   $shiftHelper;
+    /**
+     * @var \SM\Shift\Helper\Data
+     */
+    private $shiftHelper;
 
     /**
      * @var \SM\XRetail\Helper\Data
@@ -96,6 +99,12 @@ class InvoiceManagement extends ServiceAbstract {
         parent::__construct($requestInterface, $dataConfig, $storeManager);
     }
 
+    /**
+     * @param $orderId
+     *
+     * @return \Magento\Sales\Model\Order
+     * @throws \Exception
+     */
     public function invoice($orderId) {
         try {
             $invoiceData  = $this->getRequest()->getParam('invoice', []);
@@ -246,8 +255,8 @@ class InvoiceManagement extends ServiceAbstract {
                         $order = $this->invoice($order->getId());
 
                     if (!$order->hasCreditmemos()) {
-                        if (($order->getData('retail_has_shipment') && $order->getShippingMethod() == "retailshipping_retailshipping") ||
-                            (in_array('can_not_create_shipment_with_negative_qty', \SM\Sales\Repositories\OrderManagement::$MESSAGE_ERROR))) {
+                        if (($order->getData('retail_has_shipment') && $order->getShippingMethod() == "retailshipping_retailshipping")
+                            || (in_array('can_not_create_shipment_with_negative_qty', \SM\Sales\Repositories\OrderManagement::$MESSAGE_ERROR))) {
                             if ($order->canShip()) {
                                 if (!$order->getData('is_exchange'))
                                     $order->setData('retail_status', \SM\Sales\Repositories\OrderManagement::RETAIL_ORDER_COMPLETE_NOT_SHIPPED);
@@ -306,8 +315,8 @@ class InvoiceManagement extends ServiceAbstract {
                     }
                     else {
                         if ($order->canCreditmemo()) {
-                            if (($order->getData('retail_has_shipment') && $order->getShippingMethod() == "retailshipping_retailshipping") ||
-                                (in_array('can_not_create_shipment_with_negative_qty', \SM\Sales\Repositories\OrderManagement::$MESSAGE_ERROR))) {
+                            if (($order->getData('retail_has_shipment') && $order->getShippingMethod() == "retailshipping_retailshipping")
+                                || (in_array('can_not_create_shipment_with_negative_qty', \SM\Sales\Repositories\OrderManagement::$MESSAGE_ERROR))) {
                                 if ($order->canShip()) {
                                     $order->setData(
                                         'retail_status',
@@ -361,13 +370,18 @@ class InvoiceManagement extends ServiceAbstract {
                 throw new \Exception("Can not find order");
             }
 
-            if ($order->getPayment()->getMethod() != \SM\Payment\Model\RetailMultiple::PAYMENT_METHOD_RETAILMULTIPLE_CODE)
-                throw new \Exception("Can't add payment for order which haven't created from XRetail");
+            // If order was created on online/backend so we will not add payment data into it
+            if ($order->getPayment()->getMethod() != \SM\Payment\Model\RetailMultiple::PAYMENT_METHOD_RETAILMULTIPLE_CODE) {
 
-            $splitData = json_decode($order->getPayment()->getAdditionalInformation('split_data'), true);
-            foreach ($data['payment_data'] as $payment) {
-                $splitData[] = $payment;
             }
+            else {
+                // save payment information to x-retail payment. It will display in order detail on CPOS
+                $splitData = json_decode($order->getPayment()->getAdditionalInformation('split_data'), true);
+                foreach ($data['payment_data'] as $payment) {
+                    $splitData[] = $payment;
+                }
+            }
+
             $currentShift = $this->shiftHelper->getShiftOpening($data['outlet_id'], $data['register_id']);
             $shiftId      = $currentShift->getId();
             if (!$shiftId) {
@@ -378,10 +392,9 @@ class InvoiceManagement extends ServiceAbstract {
                 if (count($data['payment_data']) > 2) {
                     throw new \Exception("Refund only accept one payment method");
                 }
-                $created_at =  $this->retailHelper->getCurrentTime();
                 // within cash rounding payment
                 foreach ($data['payment_data'] as $payment_datum) {
-                    $created_at =$this->retailHelper->getCurrentTime();
+                    $created_at       = $this->retailHelper->getCurrentTime();
                     $transactionData  = [
                         "payment_id"    => isset($payment_datum['id']) ? $payment_datum['id'] : null,
                         "shift_id"      => $shiftId,
@@ -391,8 +404,8 @@ class InvoiceManagement extends ServiceAbstract {
                         "payment_type"  => $payment_datum['type'],
                         "amount"        => floatval($payment_datum['amount']),
                         "is_purchase"   => 0,
-                        "created_at" => $created_at,
-                        "order_id" => $data['order_id']
+                        "created_at"    => $created_at,
+                        "order_id"      => $data['order_id']
                     ];
                     $transactionModel = $this->getRetailTransactionModel();
                     $transactionModel->addData($transactionData)->save();
@@ -418,10 +431,14 @@ class InvoiceManagement extends ServiceAbstract {
                 }
             }
 
-            $order->getPayment()->setAdditionalInformation('split_data', json_encode($splitData))->save();
+            if (isset($splitData)) {
+                $order->getPayment()->setAdditionalInformation('split_data', json_encode($splitData))->save();
+            }
+
             $this->checkPayment($order->getEntityId());
 
-            $criteria = new DataObject(['entity_id' => $order->getEntityId(), 'storeId' => $data['store_id'], 'outletId' => $data['outlet_id']]);
+            $criteria = new DataObject(
+                ['entity_id' => $order->getEntityId(), 'storeId' => $data['store_id'], 'outletId' => $data['outlet_id'], 'isSearchOnline' => true]);
 
             return $this->orderHistoryManagement->loadOrders($criteria);
         }
@@ -429,6 +446,10 @@ class InvoiceManagement extends ServiceAbstract {
             throw new \Exception("Must required data");
     }
 
+    /**
+     * @return array
+     * @throws \Exception
+     */
     public function takePayment() {
         return $this->addPayment($this->getRequest()->getParams(), false);
     }

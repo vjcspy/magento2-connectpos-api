@@ -178,7 +178,7 @@ class WishlistManagement extends ServiceAbstract {
         return $wishlist;
     }
 
-    public function getWishlistData($customerId, $storeId) {
+    public function getWishlistData($customerId, $storeId, $usingProductOnline) {
         $wishlistFactory = $this->wishlistFactory->create();
         $wishlistItems   = $wishlistFactory->loadByCustomerId($customerId, true)
                                            ->setStore($this->getStoreManager()->getStore($storeId))
@@ -203,6 +203,10 @@ class WishlistManagement extends ServiceAbstract {
 
                     if ($option->getData('option_id')) {
                         $item['buyRequest'] = $this->retailConfig->unserialize($option->getData('value'));
+                    }
+
+                    if($usingProductOnline) {
+                        $item['product'] = $this->productRepository->getById($productId)->getData();
                     }
                     $items[] = $item;
                 }

@@ -151,9 +151,10 @@ class SalesManagement extends ServiceAbstract {
                 }
             }
         }
-        $symbolBaseCurrency = $this->storeManager->getStore()->getBaseCurrency()->getSymbol();
-        $objectManager      = \Magento\Framework\App\ObjectManager::getInstance();
-        $currency           = $objectManager->create('Magento\Directory\Model\CurrencyFactory')->create()->load($symbolBaseCurrency);
+
+        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        $storeForGetCurrency = $this->storeManager->getStore();
+        $currency           = $objectManager->create('Magento\Directory\Model\CurrencyFactory')->create()->load($storeForGetCurrency->getBaseCurrencyCode());
         $currencySymbol     = $currency->getCurrencySymbol();
 
         return $this->getSearchResult()

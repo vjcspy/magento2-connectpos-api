@@ -633,6 +633,7 @@ class CustomerManagement extends ServiceAbstract {
         $this->getSearchResult()->setSearchCriteria($searchCriteria);
         $customerId = $searchCriteria->getData('customerId');
         $storeId    = $searchCriteria->getData('storeId');
+        $usingProductOnline = $searchCriteria->getData('usingProductOnline');
         if (is_null($customerId) || is_null($storeId)) {
             throw new \Exception(__("Something wrong! Missing require value"));
         }
@@ -644,7 +645,7 @@ class CustomerManagement extends ServiceAbstract {
                                                               ->load()
                                                               ->getTotals()
                                                               ->getLifetime(),
-            'wishlist'        => $this->wishlistManagement->getWishlistData($customerId, $storeId),
+            'wishlist'        => $this->wishlistManagement->getWishlistData($customerId, $storeId, $usingProductOnline),
         ];
 
         if ($this->integrateHelper->isIntegrateRP()) {

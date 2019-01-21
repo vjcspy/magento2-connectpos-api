@@ -5,10 +5,28 @@ namespace SM\XRetail\Controller\V1;
 use SM\XRetail\Auth\Authenticate;
 use SM\XRetail\Controller\Contract\ApiAbstract;
 
+/**
+ * Class Xretail
+ * Magento 2.3 implement new CORS site check. But we don't need implement the new interface here. We already support it on client by adding ajax tag.
+ *
+ * @package SM\XRetail\Controller\V1
+ */
 class Xretail extends ApiAbstract {
 
+    /**
+     * @var \SM\XRetail\Auth\Authenticate
+     */
     private $authenticate;
 
+    /**
+     * Xretail constructor.
+     *
+     * @param \Magento\Framework\App\Action\Context              $context
+     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+     * @param \SM\XRetail\Model\Api\Configuration                $configuration
+     * @param \Magento\PageCache\Model\Config                    $config
+     * @param \SM\XRetail\Auth\Authenticate                      $authenticate
+     */
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
@@ -20,10 +38,13 @@ class Xretail extends ApiAbstract {
         $this->authenticate = $authenticate;
     }
 
+    /**
+     * @return \Magento\Framework\App\Response\Http|\Magento\Framework\App\ResponseInterface|\Magento\Framework\Controller\ResultInterface
+     */
     public function execute() {
         try {
             // authenticate
-            //$this->authenticate->authenticate($this);
+            $this->authenticate->authenticate($this);
 
             // communicate with api before
             $this->dispatchEvent('rest_api_before', ['apiController' => $this]);

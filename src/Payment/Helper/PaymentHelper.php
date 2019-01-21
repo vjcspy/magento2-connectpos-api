@@ -23,6 +23,12 @@ class PaymentHelper {
         return $paymentCollection ? $paymentCollection->getData('id') : null;
     }
 
+    public function getPaymentDataByType($type) {
+        $paymentCollection = $this->getPaymentCollection()->addFieldToFilter('type', $type)->getFirstItem();
+
+        return $paymentCollection ? $paymentCollection : null;
+    }
+
     /**
      * @return \SM\Payment\Model\ResourceModel\RetailPayment\Collection
      */

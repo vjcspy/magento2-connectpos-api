@@ -56,4 +56,15 @@ class RetailMultiple extends \Magento\Payment\Model\Method\AbstractMethod {
 
         return $this;
     }
+
+    /**
+     * Check whether payment method can be used
+     *
+     * @param \Magento\Quote\Api\Data\CartInterface|\Magento\Quote\Model\Quote|null $quote
+     * @return bool
+     */
+    public function isAvailable(\Magento\Quote\Api\Data\CartInterface $quote = null)
+    {
+        return true;
+    }
 }

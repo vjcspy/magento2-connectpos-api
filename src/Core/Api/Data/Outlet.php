@@ -80,4 +80,28 @@ class Outlet extends ApiDataAbstract {
     public function getTelephone() {
         return $this->getData('telephone');
     }
+
+    public function getPlaceId() {
+        return $this->getData('place_id');
+    }
+
+    public function getUrl() {
+        return $this->getData('url');
+    }
+
+    public function getLat() {
+        return $this->getData('lat');
+    }
+
+    public function getLng() {
+        return $this->getData('lng');
+    }
+
+    public function getAllowClickAndCollect() {
+        return $this->getData('allow_click_and_collect') == 1;
+    }
+    public function getCategoryId() {
+        return $this->getData('category_id');
+    }
 }
+

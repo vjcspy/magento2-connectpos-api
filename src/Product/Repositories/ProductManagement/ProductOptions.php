@@ -84,6 +84,11 @@ class ProductOptions {
                 $awGC                  = $this->objectManager->create('SM\Product\Repositories\ProductManagement\ProductOptions\AWGiftCard');
                 $xOptions['gift_card'] = $awGC->getGiftCardOption($product);
                 break;
+            case 'giftcard':
+                /** @var \SM\Product\Repositories\ProductManagement\ProductOptions\AWGiftCard $awGC */
+                $m2eeGC                = $this->objectManager->create('SM\Product\Repositories\ProductManagement\ProductOptions\M2EEGiftCard');
+                $xOptions['gift_card'] = $m2eeGC->getGiftCardOption($product);
+                break;
         }
 
         return $xOptions;

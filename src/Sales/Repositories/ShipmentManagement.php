@@ -47,6 +47,8 @@ class ShipmentManagement extends ServiceAbstract {
 
     static $FROM_API = false;
 
+    // static $CREATE_SHIPMENT = false;
+
     /**
      * ShipmentManagement constructor.
      *
@@ -78,6 +80,26 @@ class ShipmentManagement extends ServiceAbstract {
         parent::__construct($requestInterface, $dataConfig, $storeManager);
     }
 
+    public function createClickAndCollectInvoice() {
+        if (!($orderId = $this->getRequest()->getParam('order_id')))
+            throw new \Exception("Must have param Order Id");
+
+        if (!($storeId = $this->getRequest()->getParam('store_id')))
+            throw new \Exception("Must have param Store Id");
+
+        if (!($outletId = $this->getRequest()->getParam('outlet_id')))
+            throw new \Exception("Must have param Outlet Id");
+
+        $order = $this->objectManager->create('Magento\Sales\Model\Order')->load($orderId);
+        $this->pick($orderId);
+        $this->invoiceManagement->invoice($orderId);
+        //$this->invoiceManagement->checkPayment($order);
+        //$this->invoice($orderId);
+        $criteria = new DataObject(['entity_id' => $orderId, 'storeId' => $storeId, 'outletId' => $outletId, 'isSearchOnline' => true]);
+
+        return $this->orderHistoryManagement->loadOrders($criteria);
+    }
+
     /**
      * @throws \Exception
      */
@@ -89,12 +111,35 @@ class ShipmentManagement extends ServiceAbstract {
         if (!($storeId = $this->getRequest()->getParam('store_id')))
             throw new \Exception("Must have param Store Id");
 
+        $outletId = $this->getRequest()->getParam('outlet_id');
+
         $order = $this->ship($orderId);
         $this->invoiceManagement->checkPayment($order);
 
-        $criteria = new DataObject(['entity_id' => $order->getEntityId(), 'storeId' => $storeId]);
+        $criteria = new DataObject(['entity_id' => $order->getEntityId(), 'storeId' => $storeId, 'outletId' => $outletId]);
 
         return $this->orderHistoryManagement->loadOrders($criteria);
+    }
+
+    /**
+     * @param $orderId
+     *
+     * @return \Magento\Sales\Model\Order
+     * @throws \Exception
+     */
+    public function pick($orderId) {
+        $retail_status = $this->getRequest()->getParam('retail_status');
+        $orderModel    = $this->orderFactory->create();
+        $order         = $orderModel->load($orderId);
+
+        if (!$order->getId()) {
+            throw new \Exception("Can not find order");
+        }
+
+        $order->setData('retail_status', $retail_status);
+        $order->save();
+
+        return $order;
     }
 
     /**

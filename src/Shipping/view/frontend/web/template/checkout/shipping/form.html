@@ -1,0 +1,21 @@
+<div id="carrier-office-list-wrapper" data-bind="visible: selectedMethod() == 'smstorepickup'">
+    <p data-bind="visible: !showOfficeSelection(), i18n: 'Please provide postcode to see nearest offices'"></p>
+    <div data-bind="visible: showOfficeSelection()">
+        <p>
+            <span data-bind="i18n: 'Select outlet to pickup'"></span>
+        </p>
+        <select id="carrier-office-list" data-bind="options: offices(),
+                                            value: selectedOffice,
+                                            optionsValue: function(item){ return item;} ,
+                                            optionsText: function(item){return item.name + '(' + item.address +')';}">
+        </select>
+        <br/>
+        <div>
+
+            <iframe data-bind="attr: {'src': 'https://maps.google.com/maps?q='+ selectedOffice().location + '&amp;output=embed' }"  width="700" height="350" frameborder="0" style="border:0" allowfullscreen>
+                <p>Update google map address.</p>
+            </iframe>
+        </div>
+    <br/>
+    </div>
+</div>

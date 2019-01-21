@@ -103,26 +103,35 @@ class ProductManagement extends ServiceAbstract {
      * @var \SM\Product\Helper\ProductImageHelper
      */
     private $productImageHelper;
+    /**
+     * @var \Magento\Framework\Registry
+     */
+    private $registry;
 
     /**
      * ProductManagement constructor.
      *
-     * @param \Magento\Framework\Cache\FrontendInterface                           $cache
-     * @param RequestInterface                                                     $requestInterface
-     * @param DataConfig                                                           $dataConfig
-     * @param StoreManagerInterface                                                $storeManager
-     * @param ProductFactory                                                       $productFactory
-     * @param CollectionFactory                                                    $collectionFactory
-     * @param \SM\Product\Repositories\ProductManagement\ProductOptions            $productOptions
-     * @param \Magento\Catalog\Model\Product\Media\Config                          $productMediaConfig
-     * @param \SM\Product\Repositories\ProductManagement\ProductAttribute          $productAttribute
-     * @param \SM\Product\Repositories\ProductManagement\ProductStock              $productStock
-     * @param \SM\Product\Repositories\ProductManagement\ProductPrice              $productPrice
+     * @param \Magento\Framework\Cache\FrontendInterface $cache
+     * @param RequestInterface $requestInterface
+     * @param DataConfig $dataConfig
+     * @param StoreManagerInterface $storeManager
+     * @param ProductFactory $productFactory
+     * @param CollectionFactory $collectionFactory
+     * @param \SM\Product\Repositories\ProductManagement\ProductOptions $productOptions
+     * @param \Magento\Catalog\Model\Product\Media\Config $productMediaConfig
+     * @param \SM\Product\Repositories\ProductManagement\ProductAttribute $productAttribute
+     * @param \SM\Product\Repositories\ProductManagement\ProductStock $productStock
+     * @param \SM\Product\Repositories\ProductManagement\ProductPrice $productPrice
      * @param \SM\Product\Repositories\ProductManagement\ProductMediaGalleryImages $productMediaGalleryImages
-     * @param \Magento\Catalog\Helper\Product                                      $catalogProduct
-     * @param \SM\CustomSale\Helper\Data                                           $customSaleHelper
-     * @param \Magento\Framework\Event\ManagerInterface                            $eventManagement
+     * @param \Magento\Catalog\Helper\Product $catalogProduct
+     * @param \SM\CustomSale\Helper\Data $customSaleHelper
+     * @param \Magento\Framework\Event\ManagerInterface $eventManagement
      *
+     * @param \SM\Integrate\Helper\Data $integrateData
+     * @param WarehouseIntegrateManagement $warehouseIntegrateManagement
+     * @param \SM\Product\Helper\ProductHelper $productHelper
+     * @param ProductImageHelper $productImageHelper
+     * @param \Magento\Framework\Registry $registry
      * @internal param \SM\Product\Repositories\CustomSalesHelper $customSalesHelper
      */
     public function __construct(
@@ -144,7 +153,8 @@ class ProductManagement extends ServiceAbstract {
         \SM\Integrate\Helper\Data $integrateData,
         WarehouseIntegrateManagement $warehouseIntegrateManagement,
         \SM\Product\Helper\ProductHelper $productHelper,
-        ProductImageHelper $productImageHelper
+        ProductImageHelper $productImageHelper,
+        \Magento\Framework\Registry $registry
     ) {
         $this->cache                        = $cache;
         $this->catalogProduct               = $catalogProduct;
@@ -162,6 +172,7 @@ class ProductManagement extends ServiceAbstract {
         $this->integrateData                = $integrateData;
         $this->productHelper                = $productHelper;
         $this->productImageHelper           = $productImageHelper;
+        $this->registry                     = $registry;
         parent::__construct($requestInterface, $dataConfig, $storeManager);
     }
 
@@ -279,8 +290,7 @@ class ProductManagement extends ServiceAbstract {
         $xProduct->setData('custom_attributes', $this->getProductAttribute()->getCustomAttributes($product));
 
         // get options
-        if (($this->getSearchCriteria()->getData('isFindProduct') == 1 && $this->getSearchCriteria()->getData('isViewDetail') == true)
-            || $this->getSearchCriteria()->getData('searchOnline') != 1) {
+        if (($this->getSearchCriteria()->getData('isFindProduct') == 1 && $this->getSearchCriteria()->getData('isViewDetail') == true) || $this->getSearchCriteria()->getData('searchOnline') != 1) {
             // get options
             $xProduct->setData('x_options', $this->getProductOptions()->getOptions($product));
         }
@@ -331,7 +341,7 @@ class ProductManagement extends ServiceAbstract {
      * @throws \Exception
      */
     public function getProductCollection(\Magento\Framework\DataObject $searchCriteria) {
-
+        $this->registry->register('disableFlatProduct', true);
         $storeId = $this->getSearchCriteria()->getData('storeId');
         if (is_null($storeId)) {
             throw new \Exception(__('Must have param storeId'));
@@ -339,25 +349,37 @@ class ProductManagement extends ServiceAbstract {
         else {
             $this->getStoreManager()->setCurrentStore($storeId);
         }
+        $websiteId = $this->getStoreManager()->getWebsite()->getId();
         /** @var \Magento\Catalog\Model\ResourceModel\Product\Collection $collection */
         $collection = $this->collectionFactory->create();
-        $collection->addAttributeToSelect('*');
-        $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
-        $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
+        if (!$collection->isEnabledFlat()) {
+            $collection->addAttributeToSelect('*');
+            $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
+            $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
+            $collection->getSelect()->join(
+                ['cataloginventory_stock_item' => $collection->getTable('cataloginventory_stock_item')],
+                'cataloginventory_stock_item.product_id=e.entity_id',
+                ['stock_status' => 'cataloginventory_stock_item.is_in_stock']
+            )->where("cataloginventory_stock_item.website_id=0");
+            //$collection->joinTable(
+            //    $collection->getTable('cataloginventory_stock_item'),
+            //    'product_id=entity_id',
+            //    ['stock_status' => 'is_in_stock'])->addAttributeToSelect('stock_status');
 
-        $collection->addStoreFilter($storeId);
+            $collection->addStoreFilter($storeId);
+        }
         $collection->setCurPage($searchCriteria->getData('currentPage'));
         $collection->setPageSize($searchCriteria->getData('pageSize'));
 
-        if ($searchCriteria->getData('status')) {
-            // 1: Enable/ 2: Disable
-            $collection->addAttributeToFilter('status', ['in' => $searchCriteria->getData('status')]);
-        }
-
-        if ($searchCriteria->getData('visibility')) {
-            // 1: Not Visible Individually / 2: Catalog / 3: Search / 4: Catalog, Search
-            $collection->addAttributeToFilter('visibility', ['in' => $searchCriteria->getData('visibility')]);
-        }
+        //if ($searchCriteria->getData('status')) {
+        //    // 1: Enable/ 2: Disable
+        //    $collection->addAttributeToFilter('status', ['in' => $searchCriteria->getData('status')]);
+        //}
+        //
+        //if ($searchCriteria->getData('visibility')) {
+        //    // 1: Not Visible Individually / 2: Catalog / 3: Search / 4: Catalog, Search
+        //    $collection->addAttributeToFilter('visibility', ['in' => $searchCriteria->getData('visibility')]);
+        //}
 
         if ($searchCriteria->getData('typeId')) {
             $collection->addAttributeToFilter('type_id', ['in' => $searchCriteria->getData('typeId')]);
@@ -385,13 +407,13 @@ class ProductManagement extends ServiceAbstract {
 
 
         if ($searchCriteria->getData('searchOnline') == 1) {
-            $collection = $this->searchProductOnlineCollection($searchCriteria, $collection);
+         $collection = $this->searchProductOnlineCollection($searchCriteria, $collection);
         }
-
+        $this->registry->unregister('disableFlatProduct');
         return $collection;
     }
 
-    public function searchProductOnlineCollection($searchCriteria, $collection) {
+    public function searchProductOnlineCollection($searchCriteria, $collection){
         if ($searchCriteria->getData('isFindProduct') == 1) {
             if ($searchCriteria->getData('isViewDetail') && $searchCriteria->getData('isViewDetail') == true) {
                 $product      = $this->getProductModel()->load($searchCriteria->getData('searchValue'));
@@ -408,14 +430,9 @@ class ProductManagement extends ServiceAbstract {
             else {
                 $collection->addFieldToFilter('entity_id', ['in' => $searchCriteria->getData('searchValue')]);
             }
-        }
-        else {
+        }else {
             if ($searchCriteria->getData('showOutStock') != 1) {
-                $collection->getSelect()->join(
-                    ['cataloginventory_stock_item' => $collection->getTable('cataloginventory_stock_item')],
-                    'cataloginventory_stock_item.product_id=e.entity_id',
-                    ['stock_status' => 'cataloginventory_stock_item.is_in_stock']
-                )->where("cataloginventory_stock_item.website_id=0 AND cataloginventory_stock_item.is_in_stock = 1");
+                $collection->getSelect()->where('cataloginventory_stock_item.is_in_stock = 1');
             }
             $searchValue = $searchCriteria->getData('searchValue');
             $searchValue = str_replace(',', ' ', $searchValue);
@@ -436,13 +453,12 @@ class ProductManagement extends ServiceAbstract {
                     }
                 }
                 //$collection->addFieldToFilter($_fieldFilters, $_valueFilters);
-                $collection->addAttributeToFilter($_fieldFilters, null, 'left');
+                $collection->addAttributeToFilter($_fieldFilters ,null, 'left');
             }
             if ($searchCriteria->getData('sortValue') && $searchCriteria->getData('sortType')) {
                 $collection->addAttributeToSort($searchCriteria->getData('sortValue'), $searchCriteria->getData('sortType'));
             }
         }
-
         return $collection;
     }
 

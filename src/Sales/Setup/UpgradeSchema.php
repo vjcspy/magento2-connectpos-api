@@ -51,6 +51,9 @@ class UpgradeSchema implements UpgradeSchemaInterface {
             $this->updateRetailStatusOrder($setup, $context);
         }
         if (version_compare($context->getVersion(), '0.2.3', '<')) {
+            $this->addXRefNumOrderCardKnox($setup, $context);
+        }
+        if (version_compare($context->getVersion(), '0.2.4', '<')) {
             $this->addCashierUserInOrder($setup, $context);
         }
     }
@@ -403,6 +406,45 @@ class UpgradeSchema implements UpgradeSchemaInterface {
         $installer->endSetup();
     }
 
+    protected function addXRefNumOrderCardKnox(SchemaSetupInterface $setup, ModuleContextInterface $context) {
+        $installer = $setup;
+
+        if ($installer->getConnection()->tableColumnExists($installer->getTable('quote'), 'xRefNum')) {
+            $installer->getConnection()->dropColumn($installer->getTable('quote'), 'xRefNum');
+        }
+        if ($installer->getConnection()->tableColumnExists($installer->getTable('sales_order'), 'xRefNum')) {
+            $installer->getConnection()->dropColumn($installer->getTable('sales_order'), 'xRefNum');
+        }
+        if ($installer->getConnection()->tableColumnExists($installer->getTable('sales_order_grid'), 'xRefNum')) {
+            $installer->getConnection()->dropColumn($installer->getTable('sales_order_grid'), 'xRefNum');
+        }
+
+        $installer->getConnection()->addColumn(
+            $installer->getTable('quote'),
+            'xRefNum',
+            [
+                'type'    => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
+                'comment' => 'xRefNum',
+            ]
+        );
+        $installer->getConnection()->addColumn(
+            $installer->getTable('sales_order'),
+            'xRefNum',
+            [
+                'type'    => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
+                'comment' => 'xRefNum',
+            ]
+        );
+        $installer->getConnection()->addColumn(
+            $installer->getTable('sales_order_grid'),
+            'xRefNum',
+            [
+                'type'    => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
+                'comment' => 'xRefNum',
+            ]
+        );
+    }
+
     protected function addCashierUserInOrder(SchemaSetupInterface $setup, ModuleContextInterface $context) {
         $installer = $setup;
         if ($installer->getConnection()->tableColumnExists($installer->getTable('quote'), 'sm_seller_ids')) {
@@ -441,6 +483,5 @@ class UpgradeSchema implements UpgradeSchemaInterface {
                 'comment' => 'Seller Ids',
             ]
         );
-
     }
 }

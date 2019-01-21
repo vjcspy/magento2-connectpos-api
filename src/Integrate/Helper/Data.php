@@ -92,6 +92,10 @@ class Data {
         return !!$this->moduleList->getOne("Aheadworks_RewardPoints");
     }
 
+    public function isGiftCardMagento2EE() {
+        return !!$this->moduleList->getOne("Magento_GiftCardAccount");
+    }
+
     /**
      * @return \SM\Integrate\Model\RPIntegrateManagement
      */

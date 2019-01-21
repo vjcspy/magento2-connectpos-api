@@ -42,6 +42,9 @@ class UpgradeSchema implements UpgradeSchemaInterface {
         if (version_compare($context->getVersion(), '0.1.5', '<')) {
             $this->addRefundToGiftCard($setup);
         }
+        if (version_compare($context->getVersion(), '0.1.6', '<')) {
+            $this->addCardKnoxPayment($setup);
+        }
     }
 
     protected function createPaymentTable(SchemaSetupInterface $setup, ModuleContextInterface $context) {
@@ -315,6 +318,27 @@ class UpgradeSchema implements UpgradeSchemaInterface {
                     'title'        => "Moneris",
                     'is_dummy'     => 1,
                     'payment_data' => json_encode([])
+                ],
+            ]
+        );
+    }
+
+    protected function addCardKnoxPayment(SchemaSetupInterface $setup) {
+        $paymentTable = $setup->getTable('sm_payment');
+        $setup->getConnection()->insertArray(
+            $paymentTable,
+            [
+                'type',
+                'title',
+                'is_dummy',
+                'payment_data'
+            ],
+            [
+                [
+                    'type'         => \SM\Payment\Model\RetailPayment::CARDKNOX,
+                    'title'        => "CardKnox",
+                    'is_dummy'     => 0,
+                    'payment_data' => json_encode(['xKey' => 'provided by CardKnox', 'xSoftwareName' => 'provided by CardKnox', 'xSoftwareVersion' => 'provided by CardKnox'])
                 ],
             ]
         );

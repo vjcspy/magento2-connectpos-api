@@ -11,4 +11,8 @@
             <argument name="cache" xsi:type="object">SM\Performance\Model\Cache\Type\RetailProduct</argument>
         </arguments>
     </type>
+
+    <type name="Magento\Catalog\Model\Indexer\Product\Flat\State">
+        <plugin name="SMProductCollection" type="SM\Product\Model\Indexer\Product\Flat\State" sortOrder="1" />
+    </type>
 </config>

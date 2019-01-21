@@ -37,7 +37,7 @@ class InvoiceRegister implements \Magento\Framework\Event\ObserverInterface {
         /** @var Order $order */
         $order = $observer->getData('order');
 
-        if ($order->getData('retail_id')) {
+        if ($order->getData('retail_id') || $order->getData('shipping_method') === 'smstorepickup_smstorepickup') {
             $this->realtimeManager->trigger(RealtimeManager::ORDER_ENTITY, $order->getId(), RealtimeManager::TYPE_CHANGE_NEW);
         }
 

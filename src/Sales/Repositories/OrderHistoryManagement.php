@@ -57,6 +57,11 @@ class OrderHistoryManagement extends ServiceAbstract {
     private $orderFactory;
 
     /**
+     * @var \Magento\Quote\Api\CartRepositoryInterface
+     */
+    private $quoteRepository;
+
+    /**
      * OrderHistoryManagement constructor.
      *
      * @param \Magento\Framework\App\RequestInterface                    $requestInterface
@@ -75,6 +80,7 @@ class OrderHistoryManagement extends ServiceAbstract {
         \Magento\Catalog\Model\Product\Media\Config $productMediaConfig,
         \Magento\Customer\Model\CustomerFactory $customerFactory,
         \SM\Sales\Model\ResourceModel\OrderSyncError\CollectionFactory $orderErrorCollectionFactory,
+        \Magento\Quote\Api\CartRepositoryInterface $quoteRepository,
         \Magento\Sales\Model\OrderFactory $orderFactory
     ) {
         $this->productMediaConfig          = $productMediaConfig;
@@ -84,6 +90,7 @@ class OrderHistoryManagement extends ServiceAbstract {
         $this->customerFactory             = $customerFactory;
         $this->retailHelper                = $retailHelper;
         $this->orderErrorCollectionFactory = $orderErrorCollectionFactory;
+        $this->quoteRepository             = $quoteRepository;
         $this->orderFactory                = $orderFactory;
         parent::__construct($requestInterface, $dataConfig, $storeManager);
     }
@@ -108,17 +115,17 @@ class OrderHistoryManagement extends ServiceAbstract {
         else {
             $storeId = $searchCriteria->getData('storeId');
 
-            if (is_null($storeId)) {
-                $outletId = is_null($searchCriteria->getData("outletId"))
-                    ? $searchCriteria->getData("outlet_id")
-                    : $searchCriteria->getData(
-                        "outletId");
-                $storeId  = $this->retailHelper->getStoreByOutletId($outletId);
-            }
-
             /** @var \Magento\Sales\Model\Order $order */
             foreach ($collection as $order) {
                 $order         = $this->orderFactory->create()->loadByIncrementId($order->getIncrementId());
+                if($order->getShippingMethod() === 'smstorepickup_smstorepickup'){
+                    $quoteId = $order->getQuoteId();
+                    /** @var \Magento\Quote\Model\Quote $quote */
+                    $quote = $this->quoteRepository->get($quoteId);
+                    if ($quote->getData('outlet_id') != $searchCriteria->getData('outletId')) {
+                        continue;
+                    }
+                }
                 $customerPhone = "";
                 $xOrder        = new XOrder($order->getData());
                 //$date_start             = $this->timezoneInterface->date($array_date_start[1], null, false);
@@ -152,6 +159,24 @@ class OrderHistoryManagement extends ServiceAbstract {
                     $customerShippingAdd = new CustomerAddress($shippingAdd->getData());
                     $xOrder->setData('shipping_address', $customerShippingAdd);
                 }
+                if ($order->getShippingMethod() === 'smstorepickup_smstorepickup' && is_null($order->getData('retail_status'))) {
+                    if (!$order->hasCreditmemos()) {
+                        if ($order->canInvoice()) {
+                            $xOrder->setData('retail_status', \SM\Sales\Repositories\OrderManagement::RETAIL_ORDER_PARTIALLY_PAID_AWAIT_PICKING);
+                        }
+                        else if ($order->canShip()) {
+                            $xOrder->setData('retail_status', \SM\Sales\Repositories\OrderManagement::RETAIL_ORDER_COMPLETE_AWAIT_PICKING);
+                        }
+                    } else {
+                        if ($order->getState() == \Magento\Sales\Model\Order::STATE_CLOSED) {
+                            $xOrder->setData('retail_status', \SM\Sales\Repositories\OrderManagement::RETAIL_ORDER_FULLY_REFUND);
+                        } else {
+                            if ($order->canShip()) {
+                                $xOrder->setData('retail_status', \SM\Sales\Repositories\OrderManagement::RETAIL_ORDER_PARTIALLY_REFUND_AWAIT_PICKING);
+                            }
+                        }
+                    }
+                }
                 if ($order->getPayment()->getMethod() == \SM\Payment\Model\RetailMultiple::PAYMENT_METHOD_RETAILMULTIPLE_CODE) {
                     $paymentData = json_decode($order->getPayment()->getAdditionalInformation('split_data'), true);
                     if (is_array($paymentData)) {
@@ -170,11 +195,12 @@ class OrderHistoryManagement extends ServiceAbstract {
                             [
                                 'title'      => $order->getPayment()->getMethodInstance()->getTitle(),
                                 'amount'     => $order->getTotalPaid(),
-                                'created_at' => $order->getCreatedAt()
+                                'created_at' => $order->getCreatedAt(),
+                                'type'       => $order->getPayment()->getMethodInstance()->getCode()
                             ]
                         ]);
                 }
-
+                $xOrder->setData('outlet_id', $order->getData('outlet_id'));
                 $xOrder->setData('can_creditmemo', $order->canCreditmemo());
                 $xOrder->setData('can_ship', $order->canShip());
                 $xOrder->setData('can_invoice', $order->canInvoice());
@@ -221,6 +247,27 @@ class OrderHistoryManagement extends ServiceAbstract {
 
                     //$totals['gift_card_discount_amount'] = -$order->getData('aw_giftcard_amount');
                 }
+                if ($this->integrateHelperData->isIntegrateGC() && $this->integrateHelperData->isGiftCardMagento2EE()) {
+                    $orderGiftCards = [];
+                    if($order->getData('gift_cards')){
+                        $orderGiftCards = unserialize($order->getData('gift_cards'));
+                    }
+                    if (count($orderGiftCards) > 0) {
+                        $totals['gift_card'] = [];
+                        foreach ($orderGiftCards as $giftCard) {
+                            array_push(
+                                $totals['gift_card'],
+                                [
+                                    'gift_code'   => $giftCard['c'],
+                                    'giftcard_amount' => floatval(abs($giftCard['a'])),
+                                    'base_giftcard_amount' => floatval(abs($giftCard['ba']))
+                                ]
+                            );
+                        }
+                    }
+
+                    //$totals['gift_card_discount_amount'] = -$order->getData('aw_giftcard_amount');
+                }
 
                 $xOrder->setData('totals', $totals);
 
@@ -244,21 +291,34 @@ class OrderHistoryManagement extends ServiceAbstract {
      * @throws \Exception
      */
     protected function getOrderCollection(DataObject $searchCriteria) {
-        $outletId = $searchCriteria->getData('outletId');
         //if (is_null($outletId))
         //    throw new \Exception("Must have param outletId");
         /** @var  \Magento\Sales\Model\ResourceModel\Order\Collection $collection */
         $collection = $this->orderCollectionFactory->create();
-        if (!!$outletId && !$searchCriteria->getData('searchString')) {
-            $collection->addFieldToFilter('outlet_id', $outletId);
-        }
-
         $storeId = $searchCriteria->getData('storeId');
-        if (is_null($storeId)) {
-            throw new \Exception("Please define storeId when pull order");
-        }
-        $collection->addFieldToFilter('store_id', $storeId);
+        if (!$searchCriteria->getData('isSearchOnline')) {
+            $outletId = $searchCriteria->getData('outletId');
+            if (!!$outletId && !$searchCriteria->getData('searchString')) {
+                $collection->addFieldToFilter(
+                    array('outlet_id', 'shipping_method'),
+                    array(
+                        array('eq' => $outletId),
+                        array('eq' => 'smstorepickup_smstorepickup')
+                    )
+                );
+            }
 
+            if (is_null($storeId)) {
+                throw new \Exception("Please define storeId when pull order");
+            } else {
+                $collection->addFieldToFilter(
+                    array('store_id', 'shipping_method'),
+                    array(
+                        array('eq' => $storeId),
+                        array('eq' => 'smstorepickup_smstorepickup')
+                    ));
+            }
+        }
         if ($entityId = $searchCriteria->getData('entity_id')) {
             $arrEntityId = explode(",", $entityId);
             $collection->addFieldToFilter('entity_id', ["in" => $arrEntityId]);

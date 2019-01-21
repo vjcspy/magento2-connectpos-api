@@ -16,6 +16,7 @@ class RetailPayment extends \Magento\Framework\Model\AbstractModel
     const AUTHORIZE_NET             = 'authorize_net';
     const USAEPAY                   = 'usaepay';
     const MONERIS                   = 'moneris';
+    const CARDKNOX                  = 'cardknox';
 
     protected function _construct() {
         $this->_init('SM\Payment\Model\ResourceModel\RetailPayment');

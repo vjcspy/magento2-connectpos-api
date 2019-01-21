@@ -19,6 +19,10 @@ use SM\XRetail\Repositories\Contract\ServiceAbstract;
 class CreditmemoManagement extends ServiceAbstract {
 
     /**
+     * @var \Magento\Framework\Event\ManagerInterface
+     */
+    private $eventManagement;
+    /**
      * @var \Magento\Sales\Controller\Adminhtml\Order\CreditmemoLoader
      */
     protected $creditmemoLoader;
@@ -88,7 +92,8 @@ class CreditmemoManagement extends ServiceAbstract {
         \SM\Payment\Helper\PaymentHelper $paymentHelper,
         \SM\XRetail\Helper\Data $retailHelper,
         \SM\Integrate\Helper\Data $integrateHelperData,
-        \SM\Sales\Repositories\OrderHistoryManagement $orderHistoryManagement
+        \SM\Sales\Repositories\OrderHistoryManagement $orderHistoryManagement,
+        \Magento\Framework\Event\ManagerInterface $eventManagement
     ) {
         $this->taxConfig              = $taxConfig;
         $this->invoiceManagement      = $invoiceManagement;
@@ -98,9 +103,10 @@ class CreditmemoManagement extends ServiceAbstract {
         $this->objectManager          = $objectManager;
         $this->creditmemoSender       = $creditmemoSender;
         $this->orderHistoryManagement = $orderHistoryManagement;
-        $this->paymentHelper            = $paymentHelper;
-        $this->retailHelper             = $retailHelper;
-        $this->integrateHelperData      = $integrateHelperData;
+        $this->paymentHelper          = $paymentHelper;
+        $this->retailHelper           = $retailHelper;
+        $this->integrateHelperData    = $integrateHelperData;
+        $this->eventManagement        = $eventManagement;
         parent::__construct($requestInterface, $dataConfig, $storeManager);
     }
 
@@ -127,10 +133,11 @@ class CreditmemoManagement extends ServiceAbstract {
         $this->creditmemoLoader->setOrderId($orderId);
         $creditmemo = $this->creditmemoLoader->load();
 
-        $order = $creditmemo->getOrder();
-        if ($order->getPayment()->getMethod() != \SM\Payment\Model\RetailMultiple::PAYMENT_METHOD_RETAILMULTIPLE_CODE) {
-            throw new \Exception("Cannot create online refund for X-Retail");
-        }
+        //$order = $creditmemo->getOrder();
+        // Support create refund for online order
+        //if ($order->getPayment()->getMethod() != \SM\Payment\Model\RetailMultiple::PAYMENT_METHOD_RETAILMULTIPLE_CODE) {
+        //    throw new \Exception("Cannot create online refund for X-Retail");
+        //}
 
         return $this->getOutputCreditmemo($creditmemo);
     }
@@ -159,11 +166,11 @@ class CreditmemoManagement extends ServiceAbstract {
         //$this->creditmemoLoader->setInvoiceId($this->getRequest()->getParam('invoice_id'));
         $creditmemo = $this->creditmemoLoader->load();
 
-        // check order create by X-Retail
-        $order = $creditmemo->getOrder();
-        if ($order->getPayment()->getMethod() != \SM\Payment\Model\RetailMultiple::PAYMENT_METHOD_RETAILMULTIPLE_CODE) {
-            throw new \Exception("Cannot create online refund for X-Retail");
-        }
+        // Support create refund for online order
+        //$order = $creditmemo->getOrder();
+        //if ($order->getPayment()->getMethod() != \SM\Payment\Model\RetailMultiple::PAYMENT_METHOD_RETAILMULTIPLE_CODE) {
+        //    throw new \Exception("Cannot create online refund for X-Retail");
+        //}
 
         if ($creditmemo) {
             if (!$creditmemo->isValidGrandTotal()) {
@@ -208,10 +215,17 @@ class CreditmemoManagement extends ServiceAbstract {
             if (!empty($data['send_email'])) {
                 $this->creditmemoSender->send($creditmemo);
             }
+            $eventData = [
+                'order' => $creditmemo
+            ];
+            $this->eventManagement->dispatch(
+                'disable_giftcard_refund',
+                $eventData
+            );
 
             // for case refund using only giftcard
-            if ($data['payment_data'] == null && $this->integrateHelperData->isAHWGiftCardxist() && $this->integrateHelperData->isIntegrateGC() ) {
-                $created_at       = $this->retailHelper->getCurrentTime();
+            if ($data['payment_data'] == null && $this->integrateHelperData->isAHWGiftCardxist() && $this->integrateHelperData->isIntegrateGC()) {
+                $created_at              = $this->retailHelper->getCurrentTime();
                 $giftCardPaymentId       = $this->paymentHelper->getPaymentIdByType(\SM\Payment\Model\RetailPayment::GIFT_CARD_PAYMENT_TYPE);
                 $data['payment_data'][0] = [
                     "id"                    => $giftCardPaymentId,
@@ -226,8 +240,8 @@ class CreditmemoManagement extends ServiceAbstract {
                     "payment_data"          => []
                 ];
             }
-                // fix refund amount
-                $data['payment_data'][0]['amount'] = -$creditmemo->getGrandTotal();
+            // fix refund amount
+            $data['payment_data'][0]['amount'] = -$creditmemo->getGrandTotal();
 
             return $this->invoiceManagement->addPayment(
                 [
@@ -318,14 +332,15 @@ class CreditmemoManagement extends ServiceAbstract {
         $data['retail_has_shipment'] = $creditmemo->getOrder()->getData('retail_has_shipment');
         $data['total_paid']          = $creditmemo->getOrder()->getData('total_paid');
         $data['total_refunded']      = $creditmemo->getOrder()->getData('total_refunded');
+        $data['xRefNum']             = $creditmemo->getOrder()->getData('xRefNum');
 
         return $data;
     }
 
     private function getCurrentRate() {
         if ($this->_currentRate === null) {
-            $orderId = $this->getRequest()->getParam('order_id');
-            $order = $this->objectManager->create('Magento\Sales\Model\Order')->load($orderId);
+            $orderId            = $this->getRequest()->getParam('order_id');
+            $order              = $this->objectManager->create('Magento\Sales\Model\Order')->load($orderId);
             $this->_currentRate = $order->getStore()
                                         ->getBaseCurrency()
                                         ->convert(1, $order->getOrderCurrencyCode());

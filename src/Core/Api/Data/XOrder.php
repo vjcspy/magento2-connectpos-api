@@ -92,7 +92,18 @@ class XOrder extends \SM\Core\Api\Data\Contract\ApiDataAbstract {
         return $this->getData('user_id');
     }
 
+    public function getXRefNum() {
+        return $this->getData('xRefNum');
+    }
     public function getSellers(){
         return explode(",",$this->getData('sm_seller_ids'));
+    }
+
+    public function getShippingMethod() {
+        return $this->getData('shipping_method');
+    }
+
+    public function getOutletId() {
+        return $this->getData('outlet_id');
     }
 }

@@ -133,4 +133,7 @@ class XProduct extends \SM\Core\Api\Data\Contract\ApiDataAbstract {
     /* public function getUrlKey() {
          return $this->getData('url_key');
      }*/
+    public function getMagazijnLocatie() {
+     return $this->getData('magazijn_locatie');
+    }
 }

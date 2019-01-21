@@ -151,7 +151,7 @@ class SettingManagement extends ServiceAbstract {
                 }
                 if ($g === 'pos') {
                     $config["productAttributes"] = $this->productHelper->getProductAttributes();
-                    if ($this->integrateHelperData->isAHWGiftCardxist()) {
+                    if ($this->integrateHelperData->isAHWGiftCardxist() && $this->integrateHelperData->isIntegrateGC()) {
                         $config['list_code_pools'] = $this->gcIntegrateManagement->getGCCodePool();
                     }
                 }
@@ -183,13 +183,15 @@ class SettingManagement extends ServiceAbstract {
             $customerSales->setData('tax_class_id', $configData['xretail/pos/custom_sale_tax_class']);
             $customerSales->save();
         }
-        if (isset($configData['xretail/pos/integrate_gc'] ) && $configData['xretail/pos/integrate_gc'] == "aheadWorld" && $this->integrateHelperData->isAHWGiftCardxist()) {
-            $refundToGCProductId = $this->integrateHelperData->getGcIntegrateManagement()->getRefundToGCProductId();
-            $data                = [
-                'is_default_codepool_pattern' => $configData['xretail/pos/is_use_default_codepool_pattern'],
-                'code_pool'                   => $configData['xretail/pos/refund_gc_codepool'],
-            ];
-            $this->integrateHelperData->getGcIntegrateManagement()->updateRefundToGCProduct($data);
+        if (isset($configData['xretail/pos/integrate_gc']) && $this->integrateHelperData->isAHWGiftCardxist()) {
+            if($configData['xretail/pos/integrate_gc'] == "aheadWorks") {
+                //$refundToGCProductId = $this->integrateHelperData->getGcIntegrateManagement()->getRefundToGCProductId();
+                $data                = [
+                    'is_default_codepool_pattern' => $configData['xretail/pos/is_use_default_codepool_pattern'],
+                    'code_pool'                   => $configData['xretail/pos/refund_gc_codepool'],
+                ];
+                $this->integrateHelperData->getGcIntegrateManagement()->updateRefundToGCProduct($data);
+            }
         }
         $this->_searchCriteria = new DataObject(
             [

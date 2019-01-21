@@ -35,6 +35,11 @@
                     <service>SM\Category\Repositories\CategoryManagement</service>
                     <function>getCategoryData</function>
                 </category>
+                <load-category>
+                    <method>Get</method>
+                    <service>SM\Category\Repositories\CategoryManagement</service>
+                    <function>getDataCategory</function>
+                </load-category>
                 <!--Customer-->
                 <xcustomer>
                     <method>Get</method>
@@ -137,6 +142,12 @@
                     <service>SM\Sales\Repositories\OrderManagement</service>
                     <function>updateOrderNote</function>
                 </update-order-note>
+
+                <invoice>
+                    <method>Post</method>
+                    <service>SM\Sales\Repositories\ShipmentManagement</service>
+                    <function>createClickAndCollectInvoice</function>
+                </invoice>
                 <!--Order History-->
                 <order>
                     <method>Get</method>
@@ -366,6 +377,13 @@
                     <service>SM\XRetail\Repositories\DebugManagement</service>
                     <function>debug</function>
                 </debug>
+
+                <!--3rd Payment Gateway-->
+                <process-cardknox>
+                    <method>Post</method>
+                    <service>SM\CardKnox\Repositories\CardKnoxManagement</service>
+                    <function>processCardKnox</function>
+                </process-cardknox>
             </router>
         </apirouters>
     </default>

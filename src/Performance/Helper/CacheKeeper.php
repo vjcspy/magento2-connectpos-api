@@ -137,7 +137,7 @@ class CacheKeeper {
 
             if ($instanceInfo->getId()) {
                 if (!$this->connection->isTableExists($this->getTableName($storeId, $warehouseId))) {
-                    throw new \Exception("cache data invalid, please flush cache");
+                    throw new \Exception("can not find iz cache table in server, please flush cache");
                 }
                 $this->_cachedInstance[$cacheKey] = $instanceInfo;
             }
@@ -249,10 +249,15 @@ class CacheKeeper {
         $collection = $this->getProductCacheInstanceCollection();
         foreach ($collection as $cacheInstanceInfo) {
             \SM\Integrate\Model\WarehouseIntegrateManagement::setWarehouseId($cacheInstanceInfo->getData('warehouse_id'));
-            $this->getIzProductModel()
-                 ->getCollection()
-                 ->addFieldToFilter('id', ['in' => explode(",", $ids)])
-                 ->walk('delete');
+            try{
+                $this->getIzProductModel()
+                     ->getCollection()
+                     ->addFieldToFilter('id', ['in' => explode(",", $ids)])
+                     ->walk('delete');
+            }catch (\Exception $e){
+
+            }
+
         }
     }
 }
