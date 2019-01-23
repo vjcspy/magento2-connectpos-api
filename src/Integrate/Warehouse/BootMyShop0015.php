@@ -175,8 +175,9 @@ class BootMyShop0015 extends AbstractWarehouseIntegrate implements WarehouseInte
 
         $warehouseStockItem = $item->getData('available_quantity');
 
-        if ($warehouseStockItem) {
+        if ($warehouseStockItem !== null) {
             $defaultStock['qty'] = $warehouseStockItem;
+            $defaultStock['is_in_stock'] =  ($defaultStock['qty'] > 0) ? '1': '0';
         }
 
         return $defaultStock;
