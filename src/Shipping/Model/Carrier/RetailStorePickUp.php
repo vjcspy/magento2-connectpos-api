@@ -55,7 +55,7 @@ class RetailStorePickUp extends AbstractCarrier implements CarrierInterface {
      * @return array
      */
     public function getAllowedMethods() {
-    $collection = $this->collectionFactory->create();
+    $collection = $this->outletCollectionFactory->create();
         if($collection->getSize() == 0){
             return [];
         }else{
